@@ -13,8 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  ******************************************************************************/
-
+import net.ltgt.gradle.errorprone.CheckSeverity
+plugins {
+	id "net.ltgt.errorprone" version "3.1.0"
+	id "net.ltgt.annotator" version "0.0.1"
+}
 apply plugin: "java"
+
 
 if (JavaVersion.current().isJava9Compatible()) {
 	compileJava {
@@ -40,7 +45,33 @@ jar {
 dependencies {
 	testImplementation libraries.junit
 	api "com.badlogicgames.gdx:gdx-jnigen-loader:2.3.1"
+
+	annotationProcessor "com.uber.nullaway:nullaway:0.10.14"
+
+	compileOnly "com.google.code.findbugs:jsr305:3.0.2"
+
+	errorprone "com.google.errorprone:error_prone_core:2.22.0"
+	errorproneJavac "com.google.errorprone:javac:9+181-r4173-1"
 }
+
+tasks.withType(JavaCompile) {
+	// remove the if condition if you want to run NullAway on test code
+	if (!name.toLowerCase().contains("test")) {
+//		options.errorprone.disableAllChecks = true
+		options.errorprone.disableAllWarnings = true
+		options.errorprone {
+			check("NullAway", CheckSeverity.ERROR)
+			option("NullAway:AnnotatedPackages", "com.baglogic.gdx")
+		}
+		options.compilerArgs << "-Xmaxerrs"<< "100000"
+		options.compilerArgs << "-Xmaxwarns" << "100000"
+	}
+}
+
+tasks.named("runAnnotator", RunAnnotator).configure {
+	extraOptions = ['-rboserr']
+}
+
 
 test {
 	testLogging {
